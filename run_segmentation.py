@@ -5,6 +5,7 @@ import glob
 import cv2
 import argparse
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -109,7 +110,19 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
         filename = os.path.join(
             output_path, os.path.splitext(os.path.basename(img_name))[0]
         )
-        util.io.write_segm_img(filename, img, prediction, alpha=0.5)
+
+        if args.mask is not None:
+            filtered_predictions = prediction == args.mask
+
+            # apply mask in opencv
+            cv_mask = (filtered_predictions * 255).astype(np.uint8)
+            cv_image = cv2.imread(img_name)
+
+            output_image = cv2.bitwise_and(cv_image, cv_image, mask=cv_mask)
+            cv2.imwrite("%s.png" % filename, output_image)
+            cv2.imwrite("%s_mask.png" % filename, cv_mask)
+        else:
+            util.io.write_segm_img(filename, img, prediction, alpha=0.5)
 
     print("finished")
 
@@ -138,6 +151,10 @@ if __name__ == "__main__":
     parser.add_argument("--optimize", dest="optimize", action="store_true")
     parser.add_argument("--no-optimize", dest="optimize", action="store_false")
     parser.set_defaults(optimize=True)
+
+    parser.add_argument(
+        "--mask", default=None, type=int, help="create masks of these ADE20K classes"
+    )
 
     args = parser.parse_args()
 
