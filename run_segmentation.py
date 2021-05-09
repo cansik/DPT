@@ -116,11 +116,17 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
 
             # apply mask in opencv
             cv_mask = (filtered_predictions * 255).astype(np.uint8)
+
+            # blur mask as a preprocess step
+            if args.blur_factor > 0:
+                cv2.blur(cv_mask, (args.blur_factor, args.blur_factor), dst=cv_mask)
+                cv2.threshold(cv_mask, 1, 255, cv2.THRESH_BINARY, dst=cv_mask)
+
             cv_image = cv2.imread(img_name)
 
             output_image = cv2.bitwise_and(cv_image, cv_image, mask=cv_mask)
             cv2.imwrite("%s.png" % filename, output_image)
-            cv2.imwrite("%s_mask.png" % filename, cv_mask)
+            # cv2.imwrite("%s.png" % filename, cv_mask)
         else:
             util.io.write_segm_img(filename, img, prediction, alpha=0.5)
 
@@ -152,9 +158,8 @@ if __name__ == "__main__":
     parser.add_argument("--no-optimize", dest="optimize", action="store_false")
     parser.set_defaults(optimize=True)
 
-    parser.add_argument(
-        "--mask", default=None, type=int, help="create masks of these ADE20K classes"
-    )
+    parser.add_argument("--mask", default=None, type=int, help="create masks of these ADE20K classes")
+    parser.add_argument("--blur", default=-1, type=int, help="mask blur factor to increase area")
 
     args = parser.parse_args()
 

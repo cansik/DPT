@@ -64,6 +64,7 @@ python run_monodepth -t [dpt_hybrid_kitti|dpt_hybrid_nyu]
 
 ### Addition
 To use it as a powerful masking tool the parameter `--mask int` has been added. It returns the masked image and takes in the class index which can be found [here](https://github.com/CSAILVision/sceneparsing/blob/master/objectInfo150.csv).
+With `--blur int` it is also possible to add a gaussian blur to the resulting mask to increase it's area size.
 
 ### Citation
 
