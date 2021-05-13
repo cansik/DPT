@@ -118,8 +118,8 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             cv_mask = (filtered_predictions * 255).astype(np.uint8)
 
             # blur mask as a preprocess step
-            if args.blur_factor > 0:
-                cv2.blur(cv_mask, (args.blur_factor, args.blur_factor), dst=cv_mask)
+            if args.blur > 0:
+                cv2.blur(cv_mask, (args.blur, args.blur), dst=cv_mask)
                 cv2.threshold(cv_mask, 1, 255, cv2.THRESH_BINARY, dst=cv_mask)
 
             cv_image = cv2.imread(img_name)
