@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import torch
 import torch.nn.functional as F
+import tqdm
 
 import util.io
 
@@ -83,52 +84,55 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
 
     print("start processing")
 
-    for ind, img_name in enumerate(img_names):
+    with tqdm.tqdm(total=len(img_names)) as prog:
+        for ind, img_name in enumerate(img_names):
 
-        print("  processing {} ({}/{})".format(img_name, ind + 1, num_images))
+            # print("  processing {} ({}/{})".format(img_name, ind + 1, num_images))
 
-        # input
-        img = util.io.read_image(img_name)
-        img_input = transform({"image": img})["image"]
+            # input
+            img = util.io.read_image(img_name)
+            img_input = transform({"image": img})["image"]
 
-        # compute
-        with torch.no_grad():
-            sample = torch.from_numpy(img_input).to(device).unsqueeze(0)
-            if optimize == True and device == torch.device("cuda"):
-                sample = sample.to(memory_format=torch.channels_last)
-                sample = sample.half()
+            # compute
+            with torch.no_grad():
+                sample = torch.from_numpy(img_input).to(device).unsqueeze(0)
+                if optimize == True and device == torch.device("cuda"):
+                    sample = sample.to(memory_format=torch.channels_last)
+                    sample = sample.half()
 
-            out = model.forward(sample)
+                out = model.forward(sample)
 
-            prediction = torch.nn.functional.interpolate(
-                out, size=img.shape[:2], mode="bicubic", align_corners=False
+                prediction = torch.nn.functional.interpolate(
+                    out, size=img.shape[:2], mode="bicubic", align_corners=False
+                )
+                prediction = torch.argmax(prediction, dim=1) + 1
+                prediction = prediction.squeeze().cpu().numpy()
+
+            # output
+            filename = os.path.join(
+                output_path, os.path.splitext(os.path.basename(img_name))[0]
             )
-            prediction = torch.argmax(prediction, dim=1) + 1
-            prediction = prediction.squeeze().cpu().numpy()
 
-        # output
-        filename = os.path.join(
-            output_path, os.path.splitext(os.path.basename(img_name))[0]
-        )
+            if args.mask is not None:
+                filtered_predictions = prediction == args.mask
 
-        if args.mask is not None:
-            filtered_predictions = prediction == args.mask
+                # apply mask in opencv
+                cv_mask = (filtered_predictions * 255).astype(np.uint8)
 
-            # apply mask in opencv
-            cv_mask = (filtered_predictions * 255).astype(np.uint8)
+                # blur mask as a preprocess step
+                if args.blur > 0:
+                    cv2.blur(cv_mask, (args.blur, args.blur), dst=cv_mask)
+                    cv2.threshold(cv_mask, 1, 255, cv2.THRESH_BINARY, dst=cv_mask)
 
-            # blur mask as a preprocess step
-            if args.blur > 0:
-                cv2.blur(cv_mask, (args.blur, args.blur), dst=cv_mask)
-                cv2.threshold(cv_mask, 1, 255, cv2.THRESH_BINARY, dst=cv_mask)
+                cv_image = cv2.imread(img_name)
 
-            cv_image = cv2.imread(img_name)
+                output_image = cv2.bitwise_and(cv_image, cv_image, mask=cv_mask)
+                cv2.imwrite("%s.png" % filename, output_image)
+                # cv2.imwrite("%s.png" % filename, cv_mask)
+            else:
+                util.io.write_segm_img(filename, img, prediction, alpha=0.5)
 
-            output_image = cv2.bitwise_and(cv_image, cv_image, mask=cv_mask)
-            cv2.imwrite("%s.png" % filename, output_image)
-            # cv2.imwrite("%s.png" % filename, cv_mask)
-        else:
-            util.io.write_segm_img(filename, img, prediction, alpha=0.5)
+            prog.update()
 
     print("finished")
 
