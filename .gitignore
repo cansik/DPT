@@ -110,3 +110,6 @@ venv.bak/
 *.pt
 .DS_Store
 .idea
+*.mov
+*.mp4
+*.MOV
