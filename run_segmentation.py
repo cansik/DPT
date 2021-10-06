@@ -11,11 +11,11 @@ import torch.nn.functional as F
 import tqdm
 
 import util.io
+from util.io import get_images_in_path
 
 from torchvision.transforms import Compose
 from dpt.models import DPTSegmentationModel
 from dpt.transforms import Resize, NormalizeImage, PrepareForNet
-from utils import get_images_in_path
 
 
 def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=True):

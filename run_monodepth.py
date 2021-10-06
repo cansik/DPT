@@ -7,13 +7,13 @@ import cv2
 import argparse
 
 import util.io
+from util.io import get_images_in_path
 
 from torchvision.transforms import Compose
 
 from dpt.models import DPTDepthModel
 from dpt.midas_net import MidasNet_large
 from dpt.transforms import Resize, NormalizeImage, PrepareForNet
-from utils import get_images_in_path
 
 #from util.misc import visualize_attention
 
@@ -172,7 +172,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
         filename = os.path.join(
             output_path, os.path.splitext(os.path.basename(img_name))[0]
         )
-        util.io.write_depth(filename, prediction, bits=2)
+        util.io.write_depth(filename, prediction, bits=2, absolute_depth=args.absolute_depth)
 
     print("finished")
 
@@ -203,12 +203,14 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("--kitti_crop", dest="kitti_crop", action="store_true")
+    parser.add_argument("--absolute_depth", dest="absolute_depth", action="store_true")
 
     parser.add_argument("--optimize", dest="optimize", action="store_true")
     parser.add_argument("--no-optimize", dest="optimize", action="store_false")
 
     parser.set_defaults(optimize=True)
     parser.set_defaults(kitti_crop=False)
+    parser.set_defaults(absolute_depth=False)
 
     args = parser.parse_args()
 
