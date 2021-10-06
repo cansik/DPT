@@ -15,6 +15,7 @@ import util.io
 from torchvision.transforms import Compose
 from dpt.models import DPTSegmentationModel
 from dpt.transforms import Resize, NormalizeImage, PrepareForNet
+from utils import get_images_in_path
 
 
 def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=True):
@@ -76,7 +77,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
     model.to(device)
 
     # get input
-    img_names = glob.glob(os.path.join(input_path, "*.png"))
+    img_names = get_images_in_path(input_path)
     num_images = len(img_names)
 
     # create output folder
