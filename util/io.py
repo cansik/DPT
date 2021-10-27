@@ -1,5 +1,6 @@
 """Utils for monoDepth.
 """
+import math
 import sys
 import re
 import numpy as np
@@ -171,7 +172,8 @@ def resize_depth(depth, width, height):
     return depth_resized
 
 
-def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False, rgb_depth=False):
+def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False, rgb_depth=False,
+                fixed_depth_min: float = math.inf, fixed_depth_max: float = math.inf):
     """Write depth map to pfm and png file.
 
     Args:
@@ -181,17 +183,23 @@ def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False, rgb_d
     if save_pfm:
         write_pfm(path + ".pfm", depth.astype(np.float32))
 
+    depth_min = math.inf
+    depth_max = math.inf
+
     if absolute_depth:
         out = depth
     else:
-        depth_min = depth.min()
-        depth_max = depth.max()
+        depth_min = fixed_depth_min if not math.isinf(fixed_depth_min) else depth.min()
+        depth_max = fixed_depth_max if not math.isinf(fixed_depth_max) else depth.max()
+
+        print(f"using depth: {depth_min:0.4f} to {depth_max:0.4f}")
 
         max_val = (2 ** (8 * bits)) - 1
         image_type = "uint16" if bits == 2 else "uint8"
 
         if depth_max - depth_min > np.finfo("float").eps:
             normalized_depth = (depth - depth_min) / (depth_max - depth_min)
+            normalized_depth = np.clip(normalized_depth, 0, 1)
 
             if rgb_depth:
                 # opencv uses only 180.0 for hsv
@@ -209,9 +217,8 @@ def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False, rgb_d
         else:
             out = np.zeros(depth.shape, dtype=depth.dtype)
 
-        cv2.imwrite(path + ".png", out.astype(image_type), [cv2.IMWRITE_PNG_COMPRESSION, 0])
-
-    return
+    cv2.imwrite(path + ".png", out.astype(image_type), [cv2.IMWRITE_PNG_COMPRESSION, 0])
+    return depth_min, depth_max
 
 
 def write_segm_img(path, image, labels, palette="detail", alpha=0.5):

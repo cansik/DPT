@@ -2,10 +2,16 @@ param (
     [Parameter(Mandatory=$true)]
     [string]$video,
     [int]$crf = 25,
-    [switch]$static
+    [switch]$fixed
 )
 
 Write-Host "converting $video into a RGB-D video..."
+
+if ( $fixed )
+{
+    Write-Output "Fixed depth enabled!"
+    $fixed_depth_param = "--fixed-depth"
+}
 
 $video_name = [io.path]::GetFileNameWithoutExtension($video)
 $input = "input"
@@ -30,7 +36,7 @@ ffmpeg -y -hide_banner -loglevel error -i $video $audio_file
 
 # run convertion
 Write-Host "converting..."
-python run_monodepth.py --rgb-depth --bit-depth 1
+python run_monodepth.py --rgb-depth --bit-depth 1 $fixed_depth_param
 
 # create videos
 Write-Host "create color video..."

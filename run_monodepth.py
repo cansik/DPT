@@ -1,6 +1,7 @@
 """Compute depth maps for images in the input folder.
 """
 import argparse
+import math
 import os
 
 import cv2
@@ -124,6 +125,8 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
     # create output folder
     os.makedirs(output_path, exist_ok=True)
 
+    fixed_depth_min, fixed_depth_max = math.inf, math.inf
+
     print("start processing")
     with tqdm.tqdm(total=len(img_names)) as prog:
         for ind, img_name in enumerate(img_names):
@@ -171,8 +174,19 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             filename = os.path.join(
                 output_path, os.path.splitext(os.path.basename(img_name))[0]
             )
-            util.io.write_depth(filename, prediction, bits=args.bit_depth, absolute_depth=args.absolute_depth,
-                                save_pfm=args.save_pfm, rgb_depth=args.rgb_depth)
+
+            depth_min, depth_max = util.io.write_depth(filename, prediction,
+                                                       bits=args.bit_depth,
+                                                       absolute_depth=args.absolute_depth,
+                                                       save_pfm=args.save_pfm,
+                                                       rgb_depth=args.rgb_depth,
+                                                       fixed_depth_min=fixed_depth_min,
+                                                       fixed_depth_max=fixed_depth_max)
+
+            if args.fixed_depth:
+                fixed_depth_min = depth_min
+                fixed_depth_max = depth_max
+
             prog.update()
 
     print("finished")
@@ -213,6 +227,7 @@ if __name__ == "__main__":
     parser.add_argument("--save-pfm", action="store_true", help="If set PFM depth file will be written.")
     parser.add_argument("--bit-depth", type=int, default=2, choices=[1, 2], help="PNG output bit depth.")
     parser.add_argument("--rgb-depth", action="store_true", help="Use RGB depth encoding (hue).")
+    parser.add_argument("--fixed-depth", action="store_true", help="Fix depth range for all images.")
 
     parser.set_defaults(optimize=True)
     parser.set_defaults(kitti_crop=False)
