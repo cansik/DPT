@@ -18,22 +18,31 @@ Remove-Item "$output\*.png"
 
 # extract fps
 $fps = ffprobe -v error -select_streams v -of default=noprint_wrappers=1:nokey=1 -show_entries stream=r_frame_rate $video
+Write-Host "video FPS: $fps"
 
 # extract video
-ffmpeg -i $video -r $fps/1 "$input/frame_%04d.png"
+Write-Host "extracting frames..."
+ffmpeg -y -hide_banner -loglevel error -i $video -r $fps/1 "$input/frame_%04d.png"
 
 # extract audio
-ffmpeg -i $video $audio_file
+Write-Host "extracting audio..."
+ffmpeg -y -hide_banner -loglevel error -i $video $audio_file
 
 # run convertion
+Write-Host "converting..."
 python run_monodepth.py --rgb-depth --bit-depth 1
 
 # create videos
-ffmpeg -r $fps -i "$input/frame_%04d.png" -vcodec libx264 -crf $crf -pix_fmt yuv420p "$output/$video_name-color.mp4"
-ffmpeg -r $fps -i "$output/frame_%04d.png" -vcodec libx264 -crf $crf -pix_fmt yuv420p "$output/$video_name-depth.mp4"
+Write-Host "create color video..."
+ffmpeg -y -hide_banner -loglevel error -r $fps -i "$input/frame_%04d.png" -vcodec libx264 -crf $crf -pix_fmt yuv420p "$output/$video_name-color.mp4"
+Write-Host "create depth video..."
+ffmpeg -y -hide_banner -loglevel error -r $fps -i "$output/frame_%04d.png" -vcodec libx264 -crf $crf -pix_fmt yuv420p "$output/$video_name-depth.mp4"
 
-ffmpeg -i "$output/$video_name-depth.mp4" -i "$output/$video_name-color.mp4" -filter_complex hstack "silent-$video_name.mp4"
-ffmpeg -i "silent-$video_name.mp4" -i $audio_file -map 0:v -map 1:a -c:v copy -shortest "rgbd-$video_name.mp4"
+Write-Host "hstack videos..."
+ffmpeg -y -hide_banner -loglevel error -i "$output/$video_name-depth.mp4" -i "$output/$video_name-color.mp4" -filter_complex hstack "silent-$video_name.mp4"
+
+Write-Host "add audio to video..."
+ffmpeg -y -hide_banner -loglevel error -i "silent-$video_name.mp4" -i $audio_file -map 0:v -map 1:a -c:v copy -shortest "rgbd-$video_name.mp4"
 
 Write-Host "removing temp files..."
 rm "silent-$video_name.mp4"
