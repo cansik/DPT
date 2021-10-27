@@ -192,8 +192,6 @@ def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False, rgb_d
         depth_min = fixed_depth_min if not math.isinf(fixed_depth_min) else depth.min()
         depth_max = fixed_depth_max if not math.isinf(fixed_depth_max) else depth.max()
 
-        print(f"using depth: {depth_min:0.4f} to {depth_max:0.4f}")
-
         max_val = (2 ** (8 * bits)) - 1
         image_type = "uint16" if bits == 2 else "uint8"
 
