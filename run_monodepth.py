@@ -1,24 +1,25 @@
 """Compute depth maps for images in the input folder.
 """
-import os
-import glob
-import torch
-import cv2
 import argparse
+import os
+
+import cv2
+import torch
+from torchvision.transforms import Compose
+import tqdm
 
 import util.io
+from dpt.midas_net import MidasNet_large
+from dpt.models import DPTDepthModel
+from dpt.transforms import Resize, NormalizeImage, PrepareForNet
 from util.io import get_images_in_path
 
-from torchvision.transforms import Compose
 
-from dpt.models import DPTDepthModel
-from dpt.midas_net import MidasNet_large
-from dpt.transforms import Resize, NormalizeImage, PrepareForNet
-
-#from util.misc import visualize_attention
+# from util.misc import visualize_attention
 
 
-def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=True):
+def run(input_path, output_path, model_path, model_type="dpt_hybrid",
+        optimize=True, save_pfm=False, bit_depth=1, rgb_depth=False):
     """Run MonoDepthNN to compute depth maps.
 
     Args:
@@ -125,54 +126,55 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
     os.makedirs(output_path, exist_ok=True)
 
     print("start processing")
-    for ind, img_name in enumerate(img_names):
-        if os.path.isdir(img_name):
-            continue
+    with tqdm.tqdm(total=len(img_names)) as prog:
+        for ind, img_name in enumerate(img_names):
+            if os.path.isdir(img_name):
+                continue
+            # input
 
-        print("  processing {} ({}/{})".format(img_name, ind + 1, num_images))
-        # input
+            img = util.io.read_image(img_name)
 
-        img = util.io.read_image(img_name)
+            if args.kitti_crop is True:
+                height, width, _ = img.shape
+                top = height - 352
+                left = (width - 1216) // 2
+                img = img[top: top + 352, left: left + 1216, :]
 
-        if args.kitti_crop is True:
-            height, width, _ = img.shape
-            top = height - 352
-            left = (width - 1216) // 2
-            img = img[top : top + 352, left : left + 1216, :]
+            img_input = transform({"image": img})["image"]
 
-        img_input = transform({"image": img})["image"]
+            # compute
+            with torch.no_grad():
+                sample = torch.from_numpy(img_input).to(device).unsqueeze(0)
 
-        # compute
-        with torch.no_grad():
-            sample = torch.from_numpy(img_input).to(device).unsqueeze(0)
+                if optimize == True and device == torch.device("cuda"):
+                    sample = sample.to(memory_format=torch.channels_last)
+                    sample = sample.half()
 
-            if optimize == True and device == torch.device("cuda"):
-                sample = sample.to(memory_format=torch.channels_last)
-                sample = sample.half()
-
-            prediction = model.forward(sample)
-            prediction = (
-                torch.nn.functional.interpolate(
-                    prediction.unsqueeze(1),
-                    size=img.shape[:2],
-                    mode="bicubic",
-                    align_corners=False,
+                prediction = model.forward(sample)
+                prediction = (
+                    torch.nn.functional.interpolate(
+                        prediction.unsqueeze(1),
+                        size=img.shape[:2],
+                        mode="bicubic",
+                        align_corners=False,
+                    )
+                        .squeeze()
+                        .cpu()
+                        .numpy()
                 )
-                .squeeze()
-                .cpu()
-                .numpy()
+
+                if model_type == "dpt_hybrid_kitti":
+                    prediction *= 256
+
+                if model_type == "dpt_hybrid_nyu":
+                    prediction *= 1000.0
+
+            filename = os.path.join(
+                output_path, os.path.splitext(os.path.basename(img_name))[0]
             )
-
-            if model_type == "dpt_hybrid_kitti":
-                prediction *= 256
-
-            if model_type == "dpt_hybrid_nyu":
-                prediction *= 1000.0
-
-        filename = os.path.join(
-            output_path, os.path.splitext(os.path.basename(img_name))[0]
-        )
-        util.io.write_depth(filename, prediction, bits=2, absolute_depth=args.absolute_depth)
+            util.io.write_depth(filename, prediction, bits=bit_depth, absolute_depth=args.absolute_depth,
+                                save_pfm=save_pfm)
+            prog.update()
 
     print("finished")
 
@@ -208,6 +210,11 @@ if __name__ == "__main__":
     parser.add_argument("--optimize", dest="optimize", action="store_true")
     parser.add_argument("--no-optimize", dest="optimize", action="store_false")
 
+    # additional arguments
+    parser.add_argument("--save-pfm", action="store_true", help="If set PFM depth file will be written.")
+    parser.add_argument("--bit-depth", type=int, default=2, choices=[1, 2], help="PNG output bit depth.")
+    parser.add_argument("--rgb-depth", action="store_true", help="Use RGB depth encoding (hue).")
+
     parser.set_defaults(optimize=True)
     parser.set_defaults(kitti_crop=False)
     parser.set_defaults(absolute_depth=False)
@@ -236,4 +243,7 @@ if __name__ == "__main__":
         args.model_weights,
         args.model_type,
         args.optimize,
+        args.save_pfm,
+        args.bit_depth,
+        args.rgb_depth
     )

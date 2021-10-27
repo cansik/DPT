@@ -11,8 +11,8 @@ import os
 
 from PIL import Image
 
-
 from .pallete import get_mask_pallete
+
 
 def read_pfm(path):
     """Read pfm file.
@@ -83,7 +83,7 @@ def write_pfm(path, image, scale=1):
         if len(image.shape) == 3 and image.shape[2] == 3:  # color image
             color = True
         elif (
-            len(image.shape) == 2 or len(image.shape) == 3 and image.shape[2] == 1
+                len(image.shape) == 2 or len(image.shape) == 3 and image.shape[2] == 1
         ):  # greyscale
             color = False
         else:
@@ -171,14 +171,15 @@ def resize_depth(depth, width, height):
     return depth_resized
 
 
-def write_depth(path, depth, bits=1, absolute_depth=False):
+def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False):
     """Write depth map to pfm and png file.
 
     Args:
         path (str): filepath without extension
         depth (array): depth
     """
-    write_pfm(path + ".pfm", depth.astype(np.float32))
+    if save_pfm:
+        write_pfm(path + ".pfm", depth.astype(np.float32))
 
     if absolute_depth:
         out = depth
@@ -212,7 +213,7 @@ def write_segm_img(path, image, labels, palette="detail", alpha=0.5):
 
     mask = get_mask_pallete(labels, "ade20k")
 
-    img = Image.fromarray(np.uint8(255*image)).convert("RGBA")
+    img = Image.fromarray(np.uint8(255 * image)).convert("RGBA")
     seg = mask.convert("RGBA")
 
     out = Image.blend(img, seg, alpha)
@@ -220,6 +221,7 @@ def write_segm_img(path, image, labels, palette="detail", alpha=0.5):
     out.save(path + ".png")
 
     return
+
 
 def get_images_in_path(path: str):
     return get_files_in_path(path, ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.gif', '*.tiff'])
