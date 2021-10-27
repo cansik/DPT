@@ -16,13 +16,13 @@ Remove-Item "$input\*.*"
 Remove-Item "$output\*.*"
 
 # extract video
-ffmpeg -i $video -r $fps/1 "$input/frame_%04d.jpg"
+ffmpeg -i $video -r $fps/1 "$input/frame_%04d.png"
 
 # run convertion
-python run_monodepth.py
+python run_monodepth.py --bit-depth 1
 
 # create videos
-ffmpeg -r $fps -i "$input/frame_%04d.jpg" -vcodec libx264 -crf $crf -pix_fmt yuv420p "$output/$video_name-color.mp4"
+ffmpeg -r $fps -i "$input/frame_%04d.png" -vcodec libx264 -crf $crf -pix_fmt yuv420p "$output/$video_name-color.mp4"
 ffmpeg -r $fps -i "$output/frame_%04d.png" -vcodec libx264 -crf $crf -pix_fmt yuv420p "$output/$video_name-depth.mp4"
 
 ffmpeg -i "$output/$video_name-color.mp4" -i "$output/$video_name-depth.mp4" -filter_complex hstack "lg-$video_name.mp4"
