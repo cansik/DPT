@@ -171,7 +171,7 @@ def resize_depth(depth, width, height):
     return depth_resized
 
 
-def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False):
+def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False, rgb_depth=False):
     """Write depth map to pfm and png file.
 
     Args:
@@ -188,16 +188,28 @@ def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False):
         depth_max = depth.max()
 
         max_val = (2 ** (8 * bits)) - 1
+        image_type = "uint16" if bits == 2 else "uint8"
 
         if depth_max - depth_min > np.finfo("float").eps:
-            out = max_val * (depth - depth_min) / (depth_max - depth_min)
+            normalized_depth = (depth - depth_min) / (depth_max - depth_min)
+
+            if rgb_depth:
+                # opencv uses only 180.0 for hsv
+                # https://stackoverflow.com/a/24974804/1138326
+                out = (1.0 - normalized_depth) * 180.0
+
+                # make real grayscale image
+                out = out.reshape((*out.shape, 1))
+                shape = out.shape[:2]
+                sv_channels = np.ones((*shape, 2)) * max_val
+                out = np.concatenate((out, sv_channels), axis=2)
+                out = cv2.cvtColor(out.astype(image_type), cv2.COLOR_HSV2BGR)
+            else:
+                out = max_val * normalized_depth
         else:
             out = np.zeros(depth.shape, dtype=depth.dtype)
 
-    if bits == 1:
-        cv2.imwrite(path + ".png", out.astype("uint8"), [cv2.IMWRITE_PNG_COMPRESSION, 0])
-    elif bits == 2:
-        cv2.imwrite(path + ".png", out.astype("uint16"), [cv2.IMWRITE_PNG_COMPRESSION, 0])
+        cv2.imwrite(path + ".png", out.astype(image_type), [cv2.IMWRITE_PNG_COMPRESSION, 0])
 
     return
 

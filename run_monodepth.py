@@ -18,8 +18,7 @@ from util.io import get_images_in_path
 # from util.misc import visualize_attention
 
 
-def run(input_path, output_path, model_path, model_type="dpt_hybrid",
-        optimize=True, save_pfm=False, bit_depth=1, rgb_depth=False):
+def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=True):
     """Run MonoDepthNN to compute depth maps.
 
     Args:
@@ -172,8 +171,8 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid",
             filename = os.path.join(
                 output_path, os.path.splitext(os.path.basename(img_name))[0]
             )
-            util.io.write_depth(filename, prediction, bits=bit_depth, absolute_depth=args.absolute_depth,
-                                save_pfm=save_pfm)
+            util.io.write_depth(filename, prediction, bits=args.bit_depth, absolute_depth=args.absolute_depth,
+                                save_pfm=args.save_pfm, rgb_depth=args.rgb_depth)
             prog.update()
 
     print("finished")
@@ -204,8 +203,8 @@ if __name__ == "__main__":
         help="model type [dpt_large|dpt_hybrid|midas_v21]",
     )
 
-    parser.add_argument("--kitti_crop", dest="kitti_crop", action="store_true")
-    parser.add_argument("--absolute_depth", dest="absolute_depth", action="store_true")
+    parser.add_argument("--kitti-crop", dest="kitti_crop", action="store_true")
+    parser.add_argument("--absolute-depth", dest="absolute_depth", action="store_true")
 
     parser.add_argument("--optimize", dest="optimize", action="store_true")
     parser.add_argument("--no-optimize", dest="optimize", action="store_false")
@@ -242,8 +241,5 @@ if __name__ == "__main__":
         args.output_path,
         args.model_weights,
         args.model_type,
-        args.optimize,
-        args.save_pfm,
-        args.bit_depth,
-        args.rgb_depth
+        args.optimize
     )
