@@ -15,7 +15,7 @@ def create_rgbd_video(input_video_path: str, fixed_depth: bool):
 
     print(f"starting conversion of {project_name}...")
 
-    command = f"powershell -File to-rgbd.ps1 {input_video_path}"
+    command = f"pwsh -File to-rgbd.ps1 {input_video_path}"
 
     if fixed_depth:
         command += " -fixed"

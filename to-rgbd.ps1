@@ -34,6 +34,12 @@ ffmpeg -y -hide_banner -loglevel error -i $video -r $fps/1 "$input/frame_%04d.pn
 Write-Host "extracting audio..."
 ffmpeg -y -hide_banner -loglevel error -i $video $audio_file
 
+if($?)
+{
+    Write-Host "no audio detected!"
+    $has_audio = $true
+}
+
 # run convertion
 Write-Host "converting..."
 python run_monodepth.py --rgb-depth --bit-depth 1 $fixed_depth_param
@@ -47,8 +53,16 @@ ffmpeg -y -hide_banner -loglevel error -r $fps -i "$output/frame_%04d.png" -vcod
 Write-Host "hstack videos..."
 ffmpeg -y -hide_banner -loglevel error -i "$output/$video_name-depth.mp4" -i "$output/$video_name-color.mp4" -filter_complex hstack "silent-$video_name.mp4"
 
-Write-Host "add audio to video..."
-ffmpeg -y -hide_banner -loglevel error -i "silent-$video_name.mp4" -i $audio_file -map 0:v -map 1:a -c:v copy -shortest "rgbd-$video_name.mp4"
+if($has_audio)
+{
+    Write-Host "add audio to video..."
+    ffmpeg -y -hide_banner -loglevel error -i "silent-$video_name.mp4" -i $audio_file -map 0:v -map 1:a -c:v copy -shortest "rgbd-$video_name.mp4"
+}
+else
+{
+   Write-Host "video has no audio..."
+   Copy-Item -Path "silent-$video_name.mp4" -Destination "rgbd-$video_name.mp4"
+}
 
 Write-Host "removing temp files..."
 rm "silent-$video_name.mp4"
