@@ -55,3 +55,4 @@ rm "silent-$video_name.mp4"
 rm $audio_file
 
 Write-Host "done!"
+exit
