@@ -3,6 +3,8 @@
 import math
 import sys
 import re
+import time
+
 import numpy as np
 import cv2
 import torch
@@ -172,7 +174,8 @@ def resize_depth(depth, width, height):
     return depth_resized
 
 
-def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False, rgb_depth=False,
+def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False,
+                hue_depth=False, rgb_depth=False,
                 fixed_depth_min: float = math.inf, fixed_depth_max: float = math.inf):
     """Write depth map to pfm and png file.
 
@@ -199,7 +202,7 @@ def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False, rgb_d
             normalized_depth = (depth - depth_min) / (depth_max - depth_min)
             normalized_depth = np.clip(normalized_depth, 0, 1)
 
-            if rgb_depth:
+            if hue_depth:
                 # opencv uses only 180.0 for hsv
                 # https://stackoverflow.com/a/24974804/1138326
                 out = (1.0 - normalized_depth) * 180.0
@@ -210,6 +213,27 @@ def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False, rgb_d
                 sv_channels = np.ones((*shape, 2)) * max_val
                 out = np.concatenate((out, sv_channels), axis=2)
                 out = cv2.cvtColor(out.astype(image_type), cv2.COLOR_HSV2BGR)
+            elif rgb_depth:
+                # recalculate normalized depth with 16 bit resolution
+                max_val = (2 ** (8 * 2)) - 1
+                normalized_depth = (depth - depth_min) / (depth_max - depth_min)
+                normalized_depth = np.clip(normalized_depth, 0, 1)
+
+                # embed into rgb
+                out = np.around(max_val * normalized_depth).astype(int)
+
+                start = time.time()
+
+                def int16_as_rgb(value):
+                    c = (value >> 8) & 0xff
+                    f = value & 0xff
+                    return np.array([c, f, 0])
+
+                v_int16_as_rgb = np.vectorize(int16_as_rgb, signature='()->(n)')
+                out = v_int16_as_rgb(out)
+
+                end = time.time() - start
+                print(f"Took: {end:.2f}s")
             else:
                 out = max_val * normalized_depth
         else:

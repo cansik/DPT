@@ -179,6 +179,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
                                                        bits=args.bit_depth,
                                                        absolute_depth=args.absolute_depth,
                                                        save_pfm=args.save_pfm,
+                                                       hue_depth=args.hue_depth,
                                                        rgb_depth=args.rgb_depth,
                                                        fixed_depth_min=fixed_depth_min,
                                                        fixed_depth_max=fixed_depth_max)
@@ -226,7 +227,8 @@ if __name__ == "__main__":
     # additional arguments
     parser.add_argument("--save-pfm", action="store_true", help="If set PFM depth file will be written.")
     parser.add_argument("--bit-depth", type=int, default=2, choices=[1, 2], help="PNG output bit depth.")
-    parser.add_argument("--rgb-depth", action="store_true", help="Use RGB depth encoding (hue).")
+    parser.add_argument("--hue-depth", action="store_true", help="Use HUE depth encoding and sets bit-depth to 1.")
+    parser.add_argument("--rgb-depth", action="store_true", help="Use RGB depth encoding and sets bit-depth to 1.")
     parser.add_argument("--fixed-depth", action="store_true", help="Fix depth range for all images.")
 
     parser.set_defaults(optimize=True)
@@ -245,6 +247,9 @@ if __name__ == "__main__":
 
     if args.model_weights is None:
         args.model_weights = default_models[args.model_type]
+
+    if args.rgb_depth or args.hue_depth:
+        args.bit_depth = 1
 
     # set torch options
     torch.backends.cudnn.enabled = True

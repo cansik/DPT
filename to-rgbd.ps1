@@ -42,7 +42,7 @@ if($?)
 
 # run convertion
 Write-Host "converting..."
-python run_monodepth.py --rgb-depth --bit-depth 1 $fixed_depth_param
+python run_monodepth.py --hue-depth --bit-depth 1 $fixed_depth_param
 
 # create videos
 Write-Host "create color video..."
