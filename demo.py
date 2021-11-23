@@ -4,6 +4,7 @@ import shutil
 import gradio as gr
 
 from util.utils import call
+from sys import platform
 
 RESULT_DIR = "results"
 
@@ -15,7 +16,12 @@ def create_rgbd_video(input_video_path: str, fixed_depth: bool):
 
     print(f"starting conversion of {project_name}...")
 
-    command = f"pwsh -File to-rgbd.ps1 {input_video_path}"
+    if platform == "win32":
+        powershell_cmd = "powershell"
+    else:
+        powershell_cmd = "pwsh"
+
+    command = f"{powershell_cmd} -File to-rgbd.ps1 {input_video_path}"
 
     if fixed_depth:
         command += " -fixed"
@@ -50,7 +56,7 @@ def main():
         theme="default",
         enable_queue=False,
 
-        server_name="localhost",
+        server_name="0.0.0.0",
         server_port=7880,
 
         allow_flagging=False
