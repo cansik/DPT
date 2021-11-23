@@ -54,7 +54,7 @@ def main():
         title="DPT RGB-D Video Converter",
         description="",
         theme="default",
-        enable_queue=False,
+        enable_queue=True,
 
         server_name="0.0.0.0",
         server_port=7880,
