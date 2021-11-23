@@ -59,7 +59,8 @@ def main():
         server_name="0.0.0.0",
         server_port=7880,
 
-        allow_flagging=False
+        allow_flagging=False,
+        analytics_enabled=False
     )
     iface.launch(share=False, show_error=True)
 
