@@ -221,19 +221,13 @@ def write_depth(path, depth, bits=1, absolute_depth=False, save_pfm=False,
 
                 # embed into rgb
                 out = np.around(max_val * normalized_depth).astype(int)
+                out = np.expand_dims(out, axis=2)
 
-                start = time.time()
+                r_channel = out * 0
+                g_channel = (out >> 8) & 0xff
+                b_channel = out & 0xff
 
-                def int16_as_rgb(value):
-                    c = (value >> 8) & 0xff
-                    f = value & 0xff
-                    return np.array([c, f, 0])
-
-                v_int16_as_rgb = np.vectorize(int16_as_rgb, signature='()->(n)')
-                out = v_int16_as_rgb(out)
-
-                end = time.time() - start
-                print(f"Took: {end:.2f}s")
+                out = np.concatenate((b_channel, g_channel, r_channel), axis=2)
             else:
                 out = max_val * normalized_depth
         else:
