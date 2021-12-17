@@ -130,6 +130,10 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
                 output_image = cv2.bitwise_and(cv_image, cv_image, mask=cv_mask)
                 output_image[cv_mask == 0] = args.mask_background
 
+                if args.threshold:
+                    gray = cv2.cvtColor(output_image, cv2.COLOR_RGB2GRAY)
+                    _, output_image = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY)
+
                 cv2.imwrite("%s.png" % filename, output_image)
                 # cv2.imwrite("%s.png" % filename, cv_mask)
             else:
@@ -168,6 +172,7 @@ if __name__ == "__main__":
     parser.add_argument("--mask", default=None, type=int, help="create masks of these ADE20K classes")
     parser.add_argument("--mask-background", default=[0, 0, 0], type=int, nargs=3,
                         metavar=("r", "g", "b"), help="Background color of the mask")
+    parser.add_argument("--threshold", action="store_true", help="Threshold the image to create a black-white mask.")
     parser.add_argument("--blur", default=-1, type=int, help="mask blur factor to increase area")
 
     args = parser.parse_args()

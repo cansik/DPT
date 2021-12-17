@@ -2,21 +2,33 @@ param (
     [Parameter(Mandatory=$true)]
     [string]$video,
     [int]$crf = 25,
-    [switch]$fixed
+    [switch]$fixed,
+    [switch]$segmentation,
+    [switch]$threshold,
+    [string]$model = "dpt_hybrid"
 )
 
 Write-Host "converting $video into a RGB-D video..."
 
-if ( $fixed )
+if ( -Not $segmentation -And $fixed )
 {
     Write-Output "Fixed depth enabled!"
     $fixed_depth_param = "--fixed-depth"
+}
+
+if ( $threshold ) {
+    $threshold_param = "--threshold"
 }
 
 $video_name = [io.path]::GetFileNameWithoutExtension($video)
 $input = "input"
 $output = "output_monodepth"
 $audio_file = "audio.wav"
+
+if ( $segmentation )
+{
+    $output = "output_semseg"
+}
 
 # cleanup dirs
 Remove-Item "$input\*.png"
@@ -42,7 +54,11 @@ if($?)
 
 # run convertion
 Write-Host "converting..."
-python run_monodepth.py --hue-depth --bit-depth 1 $fixed_depth_param
+if ( $segmentation ) {
+    python run_segmentation.py --model_type $model --mask 13 $threshold_param
+} else {
+    python run_monodepth.py --model_type $model --hue-depth --bit-depth 1 $fixed_depth_param
+}
 
 # create videos
 Write-Host "create color video..."
