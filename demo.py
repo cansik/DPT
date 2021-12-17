@@ -14,7 +14,8 @@ def create_rgbd_video(input_video_path: str,
                       model: str,
                       use_segmentation: bool,
                       use_threshold: bool,
-                      fixed_depth: bool):
+                      fixed_depth: bool,
+                      stack: bool):
     project_name = os.path.splitext(os.path.basename(input_video_path))[0]
     result_file_name = f"rgbd-{project_name}.mp4"
     render_result_path = os.path.join(RESULT_DIR, result_file_name)
@@ -36,6 +37,9 @@ def create_rgbd_video(input_video_path: str,
 
     if use_threshold:
         command += " -threshold"
+
+    if stack:
+        command += " -stack"
 
     print(f"Command: {command}")
     return_code = call(command)
@@ -63,6 +67,8 @@ def main():
             gr.inputs.Checkbox(default=False, label="Black-White Mask"),
 
             gr.inputs.Checkbox(default=False, label="Fixed Depth"),
+
+            gr.inputs.Checkbox(default=True, label="H-Stack Output:Input"),
         ],
         outputs=[
             gr.outputs.Video(type=None, label="RGB-D Video"),
